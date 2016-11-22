@@ -1,6 +1,6 @@
 {
   "author": "Nodeswork<andy@nodeswork.com>",
-  "name": "nodeswork",
+  "name": "nodeswork-watchmen",
   "description": "Nodeswork-Watchmen is a nodeswork application to monitor webpage changes.",
   "version": "0.0.1",
   "repository": {
@@ -8,16 +8,22 @@
     "url": "git@github.com:nodeswork/nodeswork-watchmen.git"
   },
   "main": "lib/index.js",
-  "scripts": {},
+  "scripts": {
+    "start": "make build && node -e \"require('./lib').start()\""
+  },
   "engines": {
     "node": ">= 4.0"
   },
   "dependencies": {
+    "jsdom": "^9.8.3",
+    "nodeswork": "0.0.2",
+    "request-promise": "^4.1.1"
   },
   "devDependencies": {
     "coffee-script": "^1.11.0"
   },
   "keywords": [
-    "nodeswork", "nodeswork-watchmen"
+    "nodeswork",
+    "nodeswork-watchmen"
   ]
 }
