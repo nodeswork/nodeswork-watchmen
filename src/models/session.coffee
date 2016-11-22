@@ -6,7 +6,7 @@ jsdom        = require 'jsdom'
 request      = require 'request-promise'
 toughCookie  = require 'tough-cookie'
 
-SessionSchema = nodeswork.mongoose.Schema {
+module.exports = SessionSchema = nodeswork.mongoose.Schema {
   jar:      type: String, default: null
 }, collection: 'sessions', discriminatorKey: 'sessionType'
   .plugin nodeswork.ModelPlugins.Descriptive
@@ -63,6 +63,3 @@ SessionSchema.methods.jsdom = (params...) ->
     jsdom.env.apply jsdom.env, params
   yield @save()
   window
-
-
-module.exports = Session = nodeswork.mongoose.model 'Session', SessionSchema
