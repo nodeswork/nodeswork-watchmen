@@ -4,7 +4,9 @@ nodeswork  = require 'nodeswork'
 
 
 module.exports = WatchStaticPageTaskSchema = nodeswork.Models.Task.schema.extend {
-  user:           Number
+  user:
+    type:         Number
+    required:     yes
   session:
     type:         nodeswork.mongoose.Schema.ObjectId
     ref:          'Session'
@@ -35,7 +37,16 @@ WatchStaticPageTaskSchema.methods.execute = (nw) -> co =>
   $('script').remove()
   $('style').remove()
 
-  console.log $('body').text()
+  # console.log $('body').text().replace("\n", "").replace(" ", "")
+
+  # console.log $("[role='main']").text()
+  main = $("[role='main']")
+  center = main.find('#centerCol')
+  console.log 'title', center.find("h1").text().trim()
+  console.log 'brand', center.find("#brand").text().trim()
+  console.log 'price', center.find("#price").text().trim().replace(/[ \n]+?/g, '')
+
+  console.log 'all', main.text().replace(/[ \n]+?/g, ' ')
 
   # 1. load session
   # 2. request url

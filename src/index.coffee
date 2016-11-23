@@ -24,35 +24,27 @@ watchmen
   }
   .model 'UserConfig', UserConfigSchema
   .model 'Execution', ExecutionSchema
-  .task  'WatchStaticPageTask', WatchStaticPageTaskSchema
+  .task  'WatchStaticPageTask', WatchStaticPageTaskSchema, {
+    apiExposed:
+      methods:      ['get', 'create', 'find', 'update', 'delete']
+      urlName:      'WatchTask'
+      path:         '/watch-tasks/:taskId'
+      params:
+        taskId:     '@_id'
+      superDoc:     (ctx) -> user: ctx.user.user
+      middlewares:
+        create:     [
+          (ctx, next) -> co ->
+            session = yield ctx.user.getSession ctx.request.body.session
+            ctx.request.body.session = session.session
+            next()
+        ]
+  }
 
 
 watchmen.server.use (ctx, next) -> co ->
   ctx.user = yield watchmen.Models.UserConfig.findOneOrCreate 123
   next()
-
-
-watchmen.api.get  'WatchTask', '/watch-tasks', (ctx, next) -> co ->
-  ctx.body = yield ctx.user.findWatchTasks()
-
-
-watchmen.api.post 'WatchTask', '/watch-tasks', (ctx, next) -> co ->
-  doc  = _.extend ctx.request.body, user: ctx.user.user
-
-  ctx.body = yield watchmen.Tasks.WatchStaticPageTask.create _.extend doc, {
-    session: (yield ctx.user.getSession doc.session).session
-  }
-
-
-watchmen.api.post 'WatchTask', '/watch-tasks/:taskId', (ctx, next) -> co ->
-  doc  = ctx.request.body
-
-  ctx.body = yield watchmen.Tasks.WatchStaticPageTask.findOneAndUpdate {
-    user: ctx.user.user
-    _id:  ctx.params.taskId
-  }, _.extend(doc, user: ctx.user.user), {
-    new: yes
-  }
 
 
 getOrCreateUserSession = (userId, sessionId) -> co ->
