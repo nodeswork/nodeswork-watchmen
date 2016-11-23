@@ -1,19 +1,35 @@
-_          = require 'underscore'
-co         = require 'co'
-nodeswork  = require 'nodeswork'
+_                       = require 'underscore'
+co                      = require 'co'
+nodeswork               = require 'nodeswork'
+winston                 = require 'winston'
+
+
+CredentialSchemaPlugin  = require '../credential_plugin'
 
 
 module.exports = WatchStaticPageTaskSchema = nodeswork.Models.Task.schema.extend {
+
   user:
     type:         Number
     required:     yes
+
   session:
     type:         nodeswork.mongoose.Schema.ObjectId
     ref:          'Session'
     required:     yes
+
+  headers:        nodeswork.mongoose.Schema.Types.Mixed
+
   url:
     type:         String
     required:     yes
+
+  authProcess:
+    needLogin:
+      type:       Boolean
+      default:    false
+    identifyUrl:  String
+
   matchPatterns:  [
     name:         String
     patternType:
@@ -22,32 +38,117 @@ module.exports = WatchStaticPageTaskSchema = nodeswork.Models.Task.schema.extend
     regex:        String
   ]
 }
+  .plugin CredentialSchemaPlugin
 
 
 WatchStaticPageTaskSchema.methods.execute = (nw) -> co =>
   yield @populate('session').execPopulate()
 
-  response = yield @session.jsdom {
-    url: @url
-    scripts: [ "http://code.jquery.com/jquery.js" ]
+  if @authProcess.needLogin
+
+    loginFormDetection = yield @isUserLogin()
+
+    if loginFormDetection?
+      winston.info 'Login form detected.'
+      yield @login loginFormDetection
+      winston.info 'User logined.'
+
+  loginFormDetection = yield @isUserLogin()
+
+  console.log 'again', loginFormDetection
+
+
+
+WatchStaticPageTaskSchema.methods.isUserLogin = () -> co =>
+  console.log 'identifyUrl', @authProcess.identifyUrl
+  identifyWindow = yield @session.request {
+    url:      @authProcess.identifyUrl
+    headers:  @headers
+    jsdom:    true
   }
 
-  $ = response.$
+  detections = @detectLoginForm @authProcess.identifyUrl, identifyWindow
 
-  $('script').remove()
-  $('style').remove()
+  loginFormDetection = _.find detections, (x) -> x.itemType == 'LOGIN_FORM'
 
-  # console.log $('body').text().replace("\n", "").replace(" ", "")
 
-  # console.log $("[role='main']").text()
-  main = $("[role='main']")
-  center = main.find('#centerCol')
-  console.log 'title', center.find("h1").text().trim()
-  console.log 'brand', center.find("#brand").text().trim()
-  console.log 'price', center.find("#price").text().trim().replace(/[ \n]+?/g, '')
+WatchStaticPageTaskSchema.methods.login = (loginDetection) -> co =>
+  console.log loginDetection
+  form = _.extend {}, loginDetection.form.defaultFields, (
+    _.chain loginDetection.form.inputFields
+      .map (f) => [
+        f.name
+        switch f.mappedType
+          when 'username' then @credential.username
+          when 'password' then @credential.password
+      ]
+      .object()
+      .value()
+  ), {
+    log: '1'
+    logv: ''
+    venteprivee: ''
+  }
+  try
+    res = yield @session.request {
+      url:     loginDetection.form.action
+      method:  'POST'
+      # form:    form
+      body:     "log=1&venteprivee=&login=#{@credential.username.replace '@', '%40'}&password=#{@credential.password}&logv="
+      headers: @headers
+      gzip:    true
+      followRedirect: true
+    }
 
-  console.log 'all', main.text().replace(/[ \n]+?/g, ' ')
+    console.log 'res', res
+  catch
+    winston.info 'Login successfully.'
 
-  # 1. load session
-  # 2. request url
-  # 3. pattern match
+
+WatchStaticPageTaskSchema.methods.detectLoginForm = (sourceUrl, window) ->
+  $           = window.$
+  detections  = []
+  forms       = window.$('form')
+
+  for form in forms
+    unless (action = $(form).attr('action'))
+      continue
+    unless (method = $(form).attr('method')) == 'post'
+      continue
+
+    $inputs = $(form).find(':input')
+
+    detection = {
+      sourceUrl:        sourceUrl
+      form:
+        action:         action
+        method:         method
+        defaultFields:  {}
+        inputFields:    []
+    }
+
+    _.each $inputs, (input) ->
+      switch input.type
+        when 'hidden'
+          detection.form.defaultFields[input.name] = input.valule ? ''
+        when 'submit'
+          detection.form.submit = $(input).text().trim()
+        else
+          detection.form.inputFields.push {
+            name: input.name, inputType: input.type
+          }
+
+    fieldsCounter = _.countBy detection.form.inputFields, (field) ->
+      field.mappedType = switch
+        when field.inputType == 'password' then 'password'
+        when field.inputType == 'email' then 'username'
+        when field.name == 'username' then 'username'
+        else 'others'
+
+    if fieldsCounter.username == 1 and fieldsCounter.password == 1
+      detection.itemType      = 'LOGIN_FORM'
+      detection.autofillable  = !fieldsCounter.others
+
+    if detection.itemType? then detections.push detection
+
+  detections

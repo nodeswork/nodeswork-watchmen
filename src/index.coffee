@@ -45,9 +45,3 @@ watchmen
 watchmen.server.use (ctx, next) -> co ->
   ctx.user = yield watchmen.Models.UserConfig.findOneOrCreate 123
   next()
-
-
-getOrCreateUserSession = (userId, sessionId) -> co ->
-  if sessionId? then return sessionId
-
-  user = yield watchmen.Models.UserConfig.findOneOrCreate userId

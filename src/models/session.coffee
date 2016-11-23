@@ -38,7 +38,14 @@ SessionSchema.pre 'save', (next) ->
 SessionSchema.methods.request = (opts) ->
   response = yield request _.extend opts, jar: @requestCookieJar
   yield @save()
-  response
+  if opts.jsdom
+    yield new Promise (resolve, reject) ->
+      jsdom.env response, [
+        "http://code.jquery.com/jquery.js"
+      ], (err, window) ->
+        if err? then reject err else resolve window
+  else
+    response
 
 
 SessionSchema.methods.setCookieJarJSON = (json) ->
@@ -49,17 +56,3 @@ SessionSchema.methods.setCookieJarJSON = (json) ->
 
 SessionSchema.methods.getCookieJarJSON = ->
   @cookieJar.toJSON()
-
-
-SessionSchema.methods.jsdom = (params...) ->
-  window = yield new Promise (resolve, reject) ->
-    config = _.find params, (x) ->
-      _.isObject(x) and not _.isArray(x) and not _.isFunction x
-    params.push config = {} unless config?
-    _.extend config, {
-      done: (err, window) -> if err? then reject err else resolve window
-      cookieJar: @cookieJar
-    }
-    jsdom.env.apply jsdom.env, params
-  yield @save()
-  window
