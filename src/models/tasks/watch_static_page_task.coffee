@@ -44,6 +44,14 @@ module.exports = WatchStaticPageTaskSchema = nodeswork.Models.Task.schema.extend
 WatchStaticPageTaskSchema.methods.execute = (nw) -> co =>
   yield @populate('session').execPopulate()
 
+  logout = yield @session.request {
+    url: 'http://www.departementfeminin.com/en/deconnexion.php'
+    headers: @headers
+    gzip:   true
+  }
+
+  console.log 'logout'
+
   if @authProcess.needLogin
 
     loginFormDetection = yield @isUserLogin()
@@ -64,6 +72,7 @@ WatchStaticPageTaskSchema.methods.isUserLogin = () -> co =>
   identifyWindow = yield @session.request {
     url:      @authProcess.identifyUrl
     headers:  @headers
+    gzip:     true
     jsdom:    true
   }
 
@@ -73,7 +82,6 @@ WatchStaticPageTaskSchema.methods.isUserLogin = () -> co =>
 
 
 WatchStaticPageTaskSchema.methods.login = (loginDetection) -> co =>
-  console.log loginDetection
   form = _.extend {}, loginDetection.form.defaultFields, (
     _.chain loginDetection.form.inputFields
       .map (f) => [
@@ -84,17 +92,13 @@ WatchStaticPageTaskSchema.methods.login = (loginDetection) -> co =>
       ]
       .object()
       .value()
-  ), {
-    log: '1'
-    logv: ''
-    venteprivee: ''
-  }
+  )
+
   try
     res = yield @session.request {
       url:     loginDetection.form.action
       method:  'POST'
-      # form:    form
-      body:     "log=1&venteprivee=&login=#{@credential.username.replace '@', '%40'}&password=#{@credential.password}&logv="
+      form:    form
       headers: @headers
       gzip:    true
       followRedirect: true
@@ -130,7 +134,7 @@ WatchStaticPageTaskSchema.methods.detectLoginForm = (sourceUrl, window) ->
     _.each $inputs, (input) ->
       switch input.type
         when 'hidden'
-          detection.form.defaultFields[input.name] = input.valule ? ''
+          detection.form.defaultFields[input.name] = $(input).val() ? ''
         when 'submit'
           detection.form.submit = $(input).text().trim()
         else
