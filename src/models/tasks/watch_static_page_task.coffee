@@ -44,13 +44,13 @@ module.exports = WatchStaticPageTaskSchema = nodeswork.Models.Task.schema.extend
 WatchStaticPageTaskSchema.methods.execute = (nw) -> co =>
   yield @populate('session').execPopulate()
 
-  logout = yield @session.request {
-    url: 'http://www.departementfeminin.com/en/deconnexion.php'
-    headers: @headers
-    gzip:   true
-  }
+  # logout = yield @session.request {
+    # url: 'http://www.departementfeminin.com/en/deconnexion.php'
+    # headers: @headers
+    # gzip:   true
+  # }
 
-  console.log 'logout'
+  # console.log 'logout'
 
   if @authProcess.needLogin
 
@@ -61,10 +61,20 @@ WatchStaticPageTaskSchema.methods.execute = (nw) -> co =>
       yield @login loginFormDetection
       winston.info 'User logined.'
 
-  loginFormDetection = yield @isUserLogin()
 
-  console.log 'again', loginFormDetection
+  window = yield @session.request {
+    url:      @url
+    headers:  @headers
+    gzip:     true
+    jsdom:    true
+  }
 
+  content = window.$('body').text()
+
+  _.each @matchPatterns, (pattern) ->
+    reg = new RegExp pattern.regex, "i"
+    matches = reg.exec content
+    console.log reg, matches?.length
 
 
 WatchStaticPageTaskSchema.methods.isUserLogin = () -> co =>
