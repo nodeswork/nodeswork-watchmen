@@ -9,8 +9,12 @@ WatchStaticPageTaskSchema   = require './models/tasks/watch_static_page_task'
 
 
 module.exports = watchmen = nodeswork.extend {
-  moduleName: 'watchmen'
-  dbAddress:   'mongodb://localhost/watchmen'
+  moduleName:         'watchmen'
+  dbAddress:          'mongodb://localhost:27/watchmen'
+  components:
+    database:         yes
+    server:           yes
+    tasks:            no
 }
 
 watchmen
@@ -42,9 +46,9 @@ watchmen
   }
 
 
-watchmen.server.use (ctx, next) -> co ->
-  ctx.user = yield watchmen.Models.UserConfig.findOneOrCreate 123
-  next()
+# watchmen.server.use (ctx, next) -> co ->
+  # ctx.user = yield watchmen.Models.UserConfig.findOneOrCreate 123
+  # next()
 
 
 watchmen.api.get '/', (ctx, next) ->
