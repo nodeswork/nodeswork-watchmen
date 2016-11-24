@@ -45,3 +45,7 @@ watchmen
 watchmen.server.use (ctx, next) -> co ->
   ctx.user = yield watchmen.Models.UserConfig.findOneOrCreate 123
   next()
+
+
+watchmen.api.get '/', (ctx, next) ->
+  ctx.body = hello: 'world'
