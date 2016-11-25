@@ -1,5 +1,6 @@
 _                           = require 'underscore'
 co                          = require 'co'
+mongoose                    = require 'mongoose'
 nodeswork                   = require 'nodeswork'
 
 ExecutionSchema             = require './models/execution'
@@ -10,12 +11,13 @@ WatchStaticPageTaskSchema   = require './models/tasks/watch_static_page_task'
 
 module.exports = watchmen = nodeswork.extend {
   moduleName:         'watchmen'
-  dbAddress:          'mongodb://localhost:27/watchmen'
+  dbAddress:          'mongodb://localhost/watchmen'
   components:
     database:         yes
     server:           yes
-    tasks:            no
+    tasks:            yes
 }
+
 
 watchmen
   .model 'Session', SessionSchema, {
@@ -46,9 +48,9 @@ watchmen
   }
 
 
-# watchmen.server.use (ctx, next) -> co ->
-  # ctx.user = yield watchmen.Models.UserConfig.findOneOrCreate 123
-  # next()
+watchmen.server.use (ctx, next) -> co ->
+  ctx.user = yield watchmen.Models.UserConfig.findOneOrCreate 123
+  next()
 
 
 watchmen.api.get '/', (ctx, next) ->
